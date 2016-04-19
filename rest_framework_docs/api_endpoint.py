@@ -6,25 +6,19 @@ from django.utils.encoding import force_str
 
 class ApiEndpoint(object):
 
-    def __init__(self, pattern, parent_pattern=None):
+    def __init__(self, pattern, regex_pattern=None,is_root=True):
         self.pattern = pattern
         self.callback = pattern.callback
         # self.name = pattern.name
         self.docstring = self.__get_docstring__()
-        self.name_parent = simplify_regex(parent_pattern.regex.pattern).strip('/') if parent_pattern else None
-        self.path = self.__get_path__(parent_pattern)
+        self.name_parent = simplify_regex(regex_pattern).strip('/').split("/")[0].strip() if  not is_root else "root"
+        self.path = simplify_regex(regex_pattern)
         self.allowed_methods = self.__get_allowed_methods__()
         # self.view_name = pattern.callback.__name__
         self.errors = None
         self.fields = self.__get_serializer_fields__()
         self.fields_json = self.__get_serializer_fields_json__()
         self.permissions = self.__get_permissions_class__()
-
-    def __get_path__(self, parent_pattern):
-        if parent_pattern:
-            return "/{0}{1}".format(self.name_parent, simplify_regex(self.pattern.regex.pattern))
-        return simplify_regex(self.pattern.regex.pattern)
-
     def __get_allowed_methods__(self):
         return [force_str(m).upper() for m in self.callback.cls.http_method_names if hasattr(self.callback.cls, m)]
 

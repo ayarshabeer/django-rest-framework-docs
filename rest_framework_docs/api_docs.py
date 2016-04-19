@@ -20,13 +20,15 @@ class ApiDocumentation(object):
         else:
             self.get_all_view_names(root_urlconf.urlpatterns)
 
-    def get_all_view_names(self, urlpatterns, parent_pattern=None):
+    def get_all_view_names(self, urlpatterns, regex_pattern='', is_root=True):
         for pattern in urlpatterns:
             if isinstance(pattern, RegexURLResolver):
-                parent_pattern = None if pattern._regex == "^" else pattern
-                self.get_all_view_names(urlpatterns=pattern.url_patterns, parent_pattern=parent_pattern)
-            elif isinstance(pattern, RegexURLPattern) and self._is_drf_view(pattern) and not self._is_format_endpoint(pattern):
-                api_endpoint = ApiEndpoint(pattern, parent_pattern)
+                self.get_all_view_names(
+                    urlpatterns=pattern.url_patterns, regex_pattern=regex_pattern + pattern.regex.pattern, is_root=False)
+            elif isinstance(pattern, RegexURLPattern) and self._is_drf_view(pattern) and not self._is_format_endpoint(pattern) and not self._is_api_root_view(pattern):
+                is_root = True if is_root else False
+                api_endpoint = ApiEndpoint(
+                    pattern, regex_pattern=regex_pattern + pattern.regex.pattern, is_root=is_root)
                 self.endpoints.append(api_endpoint)
 
     def _is_drf_view(self, pattern):
@@ -40,6 +42,10 @@ class ApiDocumentation(object):
         Exclude endpoints with a "format" parameter
         """
         return '?P<format>' in pattern._regex
+
+    def _is_api_root_view(self,pattern):
+
+        return pattern.callback.__name__ == "APIRoot"
 
     def get_endpoints(self):
         return self.endpoints
